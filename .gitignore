@@ -1,0 +1,7 @@
+Inc/
+Debug/
+.project
+.cproject
+.settings/language.settings.xml
+.settings/org.eclipse.core.resources.prefs
+.metada*
