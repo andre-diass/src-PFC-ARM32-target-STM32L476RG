@@ -8,6 +8,11 @@
 #ifndef STM32L476RG_H_
 #define STM32L476RG_H_
 
+#include<stddef.h>
+#include<stdint.h>
+
+#define __vo volatile
+
 /*
  * base addresses of Flash and SRAM memories
  */
@@ -66,8 +71,46 @@
 #define UART4_BASEADDR 					 (APB1_PERIPHBASE + 0x4C00)
 #define UART5_BASEADDR 					 (APB1_PERIPHBASE + 0x5000)
 
+/*
+***************peripheral register definition structures************************
+*/
+
+typedef struct
+{
+	__vo uint32_t MODER;                        
+	__vo uint32_t OTYPER;                       
+	__vo uint32_t OSPEEDR;
+	__vo uint32_t PUPDR;
+	__vo uint32_t IDR;
+	__vo uint32_t ODR;
+	__vo uint32_t BSRR;
+	__vo uint32_t LCKR;
+	__vo uint32_t AFR[2];					 
+}GPIO_RegDef_t;
 
 
+/*
+* how will these structures be used.
+*
+* 
+GPIO_RegDef_t *pGPIOA = (GPIO_RegDef_t*)0X40020000;
+GPIO_RegDef_t *pGPIOA = (GPIO_RegDef_t*)GPIOA_BASEADDR;
+#define GPIOA           (GPIO_RegDef_t*)GPIOA_BASEADDR
+GPIO_RegDef_t *pGPIOA = GPIOA;
+*/
 
+
+/*
+ * peripheral definitions ( Peripheral base addresses typecasted to xxx_RegDef_t)
+ */
+
+#define GPIOA  				((GPIO_RegDef_t*)GPIOA_BASEADDR)
+#define GPIOB  				((GPIO_RegDef_t*)GPIOB_BASEADDR)
+#define GPIOC  				((GPIO_RegDef_t*)GPIOC_BASEADDR)
+#define GPIOD  				((GPIO_RegDef_t*)GPIOD_BASEADDR)
+#define GPIOE  				((GPIO_RegDef_t*)GPIOE_BASEADDR)
+#define GPIOF  				((GPIO_RegDef_t*)GPIOF_BASEADDR)
+#define GPIOG  				((GPIO_RegDef_t*)GPIOG_BASEADDR)
+#define GPIOH  				((GPIO_RegDef_t*)GPIOH_BASEADDR)
 
 #endif /* STM32L476RG_H_ */
