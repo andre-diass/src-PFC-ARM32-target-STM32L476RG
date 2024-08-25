@@ -46,6 +46,7 @@
 #define GPIOG_BASEADDR 					 (AHB2_PERIPHBASE + 0x1800)
 #define GPIOH_BASEADDR 					 (AHB2_PERIPHBASE + 0x1C00)
 
+
 /*
  * Base addresses of peripherals which are hanging on AHB1 bus
  */
@@ -88,6 +89,62 @@ typedef struct
 	__vo uint32_t AFR[2];					 
 }GPIO_RegDef_t;
 
+/*
+ * peripheral register definition structure for USART
+ */
+typedef struct
+{
+	__vo uint32_t SR;        				
+	__vo uint32_t DR;        			
+	__vo uint32_t BRR;         					
+	__vo uint32_t CR1;         					
+	__vo uint32_t CR2;         					
+	__vo uint32_t CR3;         					
+	__vo uint32_t GTPR;        					
+} USART_RegDef_t;
+
+/*
+ * peripheral register definition structure for RCC
+ */
+
+typedef struct
+{
+  __vo uint32_t CR;            
+  __vo uint32_t PLLCFGR;       
+  __vo uint32_t CFGR;          
+  __vo uint32_t CIR;           
+  __vo uint32_t AHB1RSTR;      
+  __vo uint32_t AHB2RSTR;      
+  __vo uint32_t AHB3RSTR;      
+  uint32_t      RESERVED0;     
+  __vo uint32_t APB1RSTR;      
+  __vo uint32_t APB2RSTR;      
+  uint32_t      RESERVED1[2];  
+  __vo uint32_t AHB1ENR;       
+  __vo uint32_t AHB2ENR;       
+  __vo uint32_t AHB3ENR;       
+  uint32_t      RESERVED2;     
+  __vo uint32_t APB1ENR;       
+  __vo uint32_t APB2ENR;       
+  uint32_t      RESERVED3[2];  
+  __vo uint32_t AHB1LPENR;     
+  __vo uint32_t AHB2LPENR;     
+  __vo uint32_t AHB3LPENR;     
+  uint32_t      RESERVED4;     
+  __vo uint32_t APB1LPENR;     
+  __vo uint32_t APB2LPENR;     
+  uint32_t      RESERVED5[2];  
+  __vo uint32_t BDCR;          
+  __vo uint32_t CSR;           
+  uint32_t      RESERVED6[2];  
+  __vo uint32_t SSCGR;         
+  __vo uint32_t PLLI2SCFGR;    
+  __vo uint32_t PLLSAICFGR;    
+  __vo uint32_t DCKCFGR;       
+  __vo uint32_t CKGATENR;      
+  __vo uint32_t DCKCFGR2;      
+
+} RCC_RegDef_t;
 
 /*
 * how will these structures be used.
@@ -112,5 +169,7 @@ GPIO_RegDef_t *pGPIOA = GPIOA;
 #define GPIOF  				((GPIO_RegDef_t*)GPIOF_BASEADDR)
 #define GPIOG  				((GPIO_RegDef_t*)GPIOG_BASEADDR)
 #define GPIOH  				((GPIO_RegDef_t*)GPIOH_BASEADDR)
+
+#define RCC                 ((RCC_RegDef_t*)RCC_BASEADDR)
 
 #endif /* STM32L476RG_H_ */
