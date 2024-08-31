@@ -4,6 +4,7 @@
  *  Created on: Aug 20, 2024
  *      Author: andre
  */
+#include "stm32l4076rg_usart_driver.h"
 
 #ifndef STM32L476RG_H_
 #define STM32L476RG_H_
@@ -180,6 +181,12 @@ GPIO_RegDef_t *pGPIOA = GPIOA;
 
 #define RCC           ((RCC_RegDef_t*)RCC_BASEADDR)
 
+#define USART1  			((USART_RegDef_t*)USART1_BASEADDR)
+#define USART2  			((USART_RegDef_t*)USART2_BASEADDR)
+#define USART3  			((USART_RegDef_t*)USART3_BASEADDR)
+#define UART4  				((USART_RegDef_t*)UART4_BASEADDR)
+#define UART5  				((USART_RegDef_t*)UART5_BASEADDR)
+
 /*
  * Clock Enable Macros for GPIOx peripherals
  */
@@ -198,11 +205,12 @@ GPIO_RegDef_t *pGPIOA = GPIOA;
 /*
  * Clock Enable Macros for USARTx peripherals
  */
-#define USART1_PCCK_EN() (RCC->APB2ENR |= (1 << 14))
-#define USART2_PCCK_EN() (RCC->APB1ENR |= (1 << 17))
-#define USART3_PCCK_EN() (RCC->APB1ENR |= (1 << 18))
-#define UART4_PCCK_EN()  (RCC->APB1ENR |= (1 << 19))
-#define UART5_PCCK_EN()  (RCC->APB1ENR |= (1 << 20))
+
+#define USART1_PCCK_EN() (RCC->APB2ENR  |= (1 << 14))
+#define USART2_PCCK_EN() (RCC->APB1ENR1 |= (1 << 17))
+#define USART3_PCCK_EN() (RCC->APB1ENR1 |= (1 << 18))
+#define UART4_PCCK_EN()  (RCC->APB1ENR1 |= (1 << 19))
+#define UART5_PCCK_EN()  (RCC->APB1ENR1 |= (1 << 20))
 
 //some generic macros
 
@@ -225,30 +233,17 @@ GPIO_RegDef_t *pGPIOA = GPIOA;
 /*!< 0x00000001 */
 #define USART_CR1_UE                  USART_CR1_UE_Msk                         
 /*!< USART Enable */
-
-
-
 #define USART_CR1_UESM_Pos            (1U)
 #define USART_CR1_UESM_Msk            (0x1UL << USART_CR1_UESM_Pos)            
-
 /*!< 0x00000002 */
 #define USART_CR1_UESM                USART_CR1_UESM_Msk                       /*!< USART Enable in STOP Mode */
-
-
-
 #define USART_CR1_RE_Pos              (2U)
 #define USART_CR1_RE_Msk              (0x1UL << USART_CR1_RE_Pos)              /*!< 0x00000004 */
 #define USART_CR1_RE                  USART_CR1_RE_Msk                         
 /*!< Receiver Enable */
-
-
-
 #define USART_CR1_TE_Pos              (3U)
 #define USART_CR1_TE_Msk              (0x1UL << USART_CR1_TE_Pos)              /*!< 0x00000008 */
 #define USART_CR1_TE                  USART_CR1_TE_Msk                         /*!< Transmitter Enable */
-
-
-
 #define USART_CR1_IDLEIE_Pos          (4U)
 #define USART_CR1_IDLEIE_Msk          (0x1UL << USART_CR1_IDLEIE_Pos)          /*!< 0x00000010 */
 #define USART_CR1_IDLEIE              USART_CR1_IDLEIE_Msk                     /*!< IDLE Interrupt Enable */
@@ -602,5 +597,6 @@ GPIO_RegDef_t *pGPIOA = GPIOA;
 #define USART_TDR_TDR_Pos             (0U)
 #define USART_TDR_TDR_Msk             (0x1FFUL << USART_TDR_TDR_Pos)           /*!< 0x000001FF */
 #define USART_TDR_TDR                 USART_TDR_TDR_Msk                        /*!< TDR[8:0] bits (Transmit Data value) */
+
 
 #endif /* STM32L476RG_H_ */
