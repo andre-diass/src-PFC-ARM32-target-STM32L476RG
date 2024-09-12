@@ -66,10 +66,13 @@ static void MX_USART1_UART_Init(void);
 uint8_t buffer[100] = {0};
 char IMEI[30];
 char ATcommand[80];
-char coordinates[100];
+char coordinates[200];
 const char APN[]  = "virtueyes.com.br";
 char USER[] = "virtu";
 char PASSWORD[] = "virtu";
+const char resource[] = "/prd/api/products";
+const char server[] = "d1c23ojg0wdyum.cloudfront.net";
+
 
 
 
@@ -81,11 +84,65 @@ void SIMTransmit(char *cmd)
   printf("Response: %s\n", buffer);
 }
 
+// Extract IMEI from buffer and save it to the IMEI variable
+void extractIMEI(void)
+{
+  SIMTransmit("AT+GSN\r\n");
+
+  if (strstr((char *)buffer, "OK"))
+  {
+    char *imei_start = strstr((char *)buffer, "\r\n") + 2; // The IMEI starts after the "\r\n"
+    strncpy(IMEI, imei_start, 15);  // IMEI is typically 15 digits long
+    IMEI[15] = '\0';  // Null-terminate the string
+    printf("IMEI: %s\n", IMEI);
+  }
+  else
+  {
+    printf("Failed to retrieve IMEI.\n");
+  }
+}
+
+void getGPSCoordinates(void)
+{
+    bool gpsDataReceived = false;
+
+    // Command to request GNSS information
+    const char *gpsCommand = "AT+CGNSINF\r\n";
+
+    // Clear the coordinates buffer
+    memset(coordinates, 0, sizeof(coordinates));
+    SIMTransmit("AT+CGNSPWR=1\r\n");
+
+    while (!gpsDataReceived)
+    {
+        // Transmit the GPS command
+        SIMTransmit(gpsCommand);
+
+        // Check if the response contains valid GPS data
+        if (strstr((char *)buffer, "+CGNSINF: 1,1,"))
+        {
+        	// Copy the entire buffer into the coordinates variable
+        	            strncpy(coordinates, (char *)buffer, sizeof(coordinates) - 1);
+        	            coordinates[sizeof(coordinates) - 1] = '\0';  // Ensure null-termination
+
+        	            gpsDataReceived = true;
+        	            printf("GPS coordinates received: %s\n", coordinates);
+        }
+        else
+        {
+            printf("Waiting for valid GPS data...\n");
+            HAL_Delay(4000);  // Wait before sending the command again
+        }
+    }
+}
+
+
 void httpPost(void)
 {
   bool ATisOK = false;
   bool CGREGisOK = false;
   bool NETOPENisOK = false;
+  bool REQUESTSENT = false;
 
   //Check if module is receiving and responding to commands
   while(!ATisOK)
@@ -113,6 +170,9 @@ void httpPost(void)
        SIMTransmit("AT+CFUN=1\r\n"); // Sets functionalities to full.
        sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\",\"0.0.0.0\",0,0,0,0\r\n",APN);
        SIMTransmit(ATcommand); // Define a Packet Data Protocol (PDP) context with  AccesSIMTransmit("AT+CGREG?\r\n"); // Query the Network Registration status for GPRS.
+       extractIMEI();          // Extract IMEI number
+
+
   }
 
   // Query the Network Registration status for GPRS.
@@ -162,8 +222,7 @@ void httpPost(void)
     	SIMTransmit("AT+CIICR\r\n");  // Bring Up Wireless Connection with GPRS
     	SIMTransmit("AT+CIFSR\r\n");  // Get Local IP Address
     	SIMTransmit("AT+CGATT?\r\n"); // Query GPRS status and expect it to be '+CGATT: 1'
-
-    	//get gps coordinates and IMEI and save them to varibles to be sent
+    	//getGPSCoordinates();
 
 
       if(strstr((char *)buffer,"+CGATT: 1"))
@@ -173,6 +232,76 @@ void httpPost(void)
       }
     }
   }
+
+  if(ATisOK && CGREGisOK && NETOPENisOK)
+    {
+
+      while(!REQUESTSENT )
+		  {
+			  const char *json_data = "{\"test\": \"data sent\"}";
+    	  int json_length = strlen(json_data);
+
+    	  SIMTransmit("AT+CIPCLOSE=0\r\n");  // Get Local IP Address
+    	  SIMTransmit("AT+CIPSTART=0,\"TCP\",\"d1c23ojg0wdyum.cloudfront.net\",80\r\n");
+
+    	  // Perform http request
+    	  sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(resource)+16);
+          SIMTransmit(ATcommand);
+              if(strstr((char *)buffer,">"))
+    	      {
+    	        sprintf(ATcommand,"POST %s HTTP/1.1\r\n",resource);
+    	        SIMTransmit(ATcommand);
+    	      }
+
+
+           sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(server)+8);
+           SIMTransmit(ATcommand);
+               if(strstr((char *)buffer,">"))
+               {
+                 sprintf(ATcommand,"Host: %s\r\n",server);
+                 SIMTransmit(ATcommand);
+               }
+
+            SIMTransmit("AT+CIPSEND=0,32\r\n");
+                if(strstr((char *)buffer,">"))
+                {
+                 SIMTransmit("Content-Type: application/json\r\n");
+                }
+
+            SIMTransmit("AT+CIPSEND=0,20\r\n");
+                if(strstr((char *)buffer,">"))
+                {
+                 SIMTransmit("Content-Length: 21");
+                }
+
+             SIMTransmit("AT+CIPSEND=0,21\r\n");
+                if(strstr((char *)buffer,">"))
+                {
+                 SIMTransmit("Connection: close\r\n");
+                }
+
+                SIMTransmit("AT+CIPSEND=0,20\r\n");
+                if (strstr((char *)buffer, ">")) {
+                    // Send the actual data
+                    SIMTransmit("{\"test\": \"DATA sent\"}\r\n");
+                }
+
+                SIMTransmit("AT+CIPSEND=0,2\r\n");
+                    if(strstr((char *)buffer,">"))
+                    {
+                      SIMTransmit("\r\n");
+                    }
+
+                    SIMTransmit("AT+CIPCLOSE=0\r\n");
+
+
+        if(strstr((char *)buffer,"+CGATT: 1"))
+        {
+          REQUESTSENT = true;
+          printf("Post request was sent\n");
+        }
+      }
+    }
 
 
 }
