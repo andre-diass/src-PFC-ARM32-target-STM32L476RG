@@ -20,6 +20,8 @@
 #include "main.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -60,25 +62,19 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-const char apn[]  = "virtueyes.com.br"; // Change this to your Provider details
-const uint32_t timeOut =900000;
-char content[80];
-char ATcommand[80];
+
 uint8_t buffer[100] = {0};
-uint8_t ATisOK = 0;
-uint8_t CGREGisOK = 0;
-uint8_t CIPOPENisOK = 0;
-uint8_t NETOPENisOK = 0;
-uint32_t previousTick;
-char username[] = "virtu";
-char password[] = "virtu";
-char command[100];
+char IMEI[30];
+char ATcommand[80];
+char coordinates[100];
+const char APN[]  = "virtueyes.com.br";
+char USER[] = "virtu";
+char PASSWORD[] = "virtu";
+
 
 
 void SIMTransmit(char *cmd)
 {
-	  printf("Sending: %s\n", cmd);
-
   memset(buffer,0,sizeof(buffer));
   HAL_UART_Transmit(&huart1,(uint8_t *)cmd,strlen(cmd),1000);
   HAL_UART_Receive (&huart1, buffer, 100, 1000);
@@ -87,19 +83,17 @@ void SIMTransmit(char *cmd)
 
 void httpPost(void)
 {
-  ATisOK = 0;
-  CGREGisOK = 0;
-  NETOPENisOK = 0;
-  CIPOPENisOK = 0;
-  // Check for OK response for AT
-  previousTick =  HAL_GetTick();
-  while(!ATisOK && previousTick  + timeOut >  HAL_GetTick())
+  bool ATisOK = false;
+  bool CGREGisOK = false;
+  bool NETOPENisOK = false;
+
+  //Check if module is receiving and responding to commands
+  while(!ATisOK)
   {
     SIMTransmit("AT\r\n");
-    HAL_Delay(1000);
     if(strstr((char *)buffer,"OK"))
     {
-      ATisOK = 1;
+      ATisOK = true;
       printf("AT is OK\n");
     }
   }
@@ -107,50 +101,74 @@ void httpPost(void)
   // Check for network registration.
   if(ATisOK)
   {
-    previousTick =  HAL_GetTick();
-    while(!CGREGisOK  && previousTick  + timeOut >  HAL_GetTick())
+
+       SIMTransmit("AT+CMEE=0\r\n"); //Enables the use of result code.
+       SIMTransmit("AT+CLTS=1\r\n"); //Enable the local time stamp. The module will update its internal clock to the network-provided time, if available
+       SIMTransmit("AT+CBATCHK=1\r\n"); //Enable the battery voltage checking feature.
+       SIMTransmit("AT+CPIN?\r\n"); //Queries the current status of the SIM card's PIN and provides information about whether the SIM card is ready for use or requires a PIN
+       SIMTransmit("AT+CGSN\r\n"); //Request Product Serial Number Identification
+       SIMTransmit("AT+CFUN=0\r\n"); //Sets the functionality level of the modem  by controlling its RF (radio frequency) transmission and other functionalities to minimum.
+       SIMTransmit("AT+CNMP=2\r\n"); // Sets preferred Mode (GSM, LTE) Selection to automatic.
+       SIMTransmit("AT+CMNB=1\r\n"); // Sets preferred Selection between CAT-M and NB-IoT to CAT-M
+       SIMTransmit("AT+CFUN=1\r\n"); // Sets functionalities to full.
+       sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\",\"0.0.0.0\",0,0,0,0\r\n",APN);
+       SIMTransmit(ATcommand); // Define a Packet Data Protocol (PDP) context with  AccesSIMTransmit("AT+CGREG?\r\n"); // Query the Network Registration status for GPRS.
+  }
+
+  // Query the Network Registration status for GPRS.
+  if(ATisOK)
     {
-    	SIMTransmit("AT+CGNSPWR=1\r\n");
-        SIMTransmit("AT+CPIN?\r\n");
- 	    SIMTransmit("AT+CSQ\r\n");
-        SIMTransmit("AT+CGATT?\r\n");
-        sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\",\"0.0.0.0\",0,0\r\n",apn);
-        SIMTransmit(ATcommand);
-        //SIMTransmit("AT+CSTT=\"virtueyes.com.br\",\"virtu\",\"virtu\"\r\n");
-        SIMTransmit("AT+CSTT?\r\n");
-        //SIMTransmit("AT+CIICR\r\n");
-        SIMTransmit("AT+CIICR=?\r\n");
-        //SIMTransmit("AT+CIPCLOSE\r\n");
-        SIMTransmit("AT+CIPSTART=\"TCP\",\"postman-echo.com\",\"80\"\r\n");
-        SIMTransmit("AT+CIFSR\r\n");
-        SIMTransmit("AT+CGATT?\r\n");
-        SIMTransmit("AT+CGREG?\r\n");
-
-
-      if(strstr((char *)buffer,"+CGREG: 0,1"))
+      while(!CGREGisOK)
       {
-        CGREGisOK = 1;
-        printf("network registration OK\n");
+        SIMTransmit("AT+CGREG?\r\n");
+        if(strstr((char *)buffer,"+CGREG: 0,1"))
+        {
+          CGREGisOK = true;
+          printf("Network registration OK\n");
+        }
       }
     }
-  }
+
+
 
   // Check for Internet IP Connection
   if(ATisOK && CGREGisOK)
   {
-    previousTick =  HAL_GetTick();
-    while(!NETOPENisOK  && previousTick  + timeOut >  HAL_GetTick())
+
+    while(!NETOPENisOK )
     {
+    	SIMTransmit("AT+CIPSHUT\r\n"); // Close connections
+    	SIMTransmit("AT+CGATT=0\r\n"); // Detach from the GPRS (General Packet Radio Service) network
+    	sprintf(ATcommand,"AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r\n");
+    	SIMTransmit(ATcommand); // Set the connection type to GPRS:
+    	sprintf(ATcommand,"AT+SAPBR=3,1,\"APN\",\"%s\"\r\n",APN);
+    	SIMTransmit(ATcommand); // Set the APN
+    	sprintf(ATcommand,"AT+SAPBR=3,1,\"USER\",\"%s\"\r\n",USER);
+    	SIMTransmit(ATcommand); // Set user
+    	sprintf(ATcommand,"AT+SAPBR=3,1,\"PWD\",\"%s\"\r\n",PASSWORD);
+    	SIMTransmit(ATcommand); // Set password
+    	sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\"\r\n",APN);
+    	SIMTransmit(ATcommand); // Set APN again
+    	SIMTransmit("AT+CGATT=1\r\n"); // Again but now attach
+    	SIMTransmit("AT+CGACT=1,1\r\n"); // Again but now Specifies the context identifier (CID) to activate with the seconda parameter
+    	SIMTransmit("AT+SAPBR=1,1\r\n"); // To open the bearer connection
+    	SIMTransmit("AT+SAPBR=2,1\r\n"); // Query Bearer Status
+    	SIMTransmit("AT+CIPMUX=1\r\n"); // Configure the "Multiple IP Connection Mode", allows multiple simultaneous connections
+    	SIMTransmit("AT+CIPQSEND=1\r\n"); // Controls the mode for sending data over an IP connection to 'Quick Send Mode'.
+    	SIMTransmit("AT+CIPRXGET=1\r\n"); // Instructing the module to check how much data has been received from the network but has not yet been read or processed from the buffer
+    	sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\"\r\n",APN);
+    	SIMTransmit(ATcommand); // Set APN again
+    	SIMTransmit("AT+CSTT=\"virtueyes.com.br\",\"virtu\",\"virtu\"\r\n");
+    	SIMTransmit("AT+CIICR\r\n");  // Bring Up Wireless Connection with GPRS
+    	SIMTransmit("AT+CIFSR\r\n");  // Get Local IP Address
+    	SIMTransmit("AT+CGATT?\r\n"); // Query GPRS status and expect it to be '+CGATT: 1'
 
-    	// Check GNSS status periodically
-    	SIMTransmit("AT+CGNSINF\r\n");
-    	HAL_Delay(9000);  // Wait for GPS data
+    	//get gps coordinates and IMEI and save them to varibles to be sent
 
 
-
-      if(strstr((char *)buffer,"+NETOPEN: 1"))
+      if(strstr((char *)buffer,"+CGATT: 1"))
       {
-        NETOPENisOK = 1;
+        NETOPENisOK = true;
         printf("Internet IP Connection is OK\n");
       }
     }
