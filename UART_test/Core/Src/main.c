@@ -113,6 +113,8 @@ void httpPost(void)
        SIMTransmit("AT+CFUN=1\r\n"); // Sets functionalities to full.
        sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\",\"0.0.0.0\",0,0,0,0\r\n",APN);
        SIMTransmit(ATcommand); // Define a Packet Data Protocol (PDP) context with  AccesSIMTransmit("AT+CGREG?\r\n"); // Query the Network Registration status for GPRS.
+       sprintf(ATcommand,"AT+CGDCONT=13,\"IP\",\"%s\",\"0.0.0.0\",0,0,0,0\r\n",APN);
+       SIMTransmit(ATcommand);  
   }
 
   // Query the Network Registration status for GPRS.
@@ -156,8 +158,8 @@ void httpPost(void)
     	SIMTransmit("AT+CIPMUX=1\r\n"); // Configure the "Multiple IP Connection Mode", allows multiple simultaneous connections
     	SIMTransmit("AT+CIPQSEND=1\r\n"); // Controls the mode for sending data over an IP connection to 'Quick Send Mode'.
     	SIMTransmit("AT+CIPRXGET=1\r\n"); // Instructing the module to check how much data has been received from the network but has not yet been read or processed from the buffer
-    	sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\"\r\n",APN);
-    	SIMTransmit(ATcommand); // Set APN again
+    	// sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\"\r\n",APN);
+    	// SIMTransmit(ATcommand); // Set APN again
     	SIMTransmit("AT+CSTT=\"virtueyes.com.br\",\"virtu\",\"virtu\"\r\n");
     	SIMTransmit("AT+CIICR\r\n");  // Bring Up Wireless Connection with GPRS
     	SIMTransmit("AT+CIFSR\r\n");  // Get Local IP Address
