@@ -72,6 +72,9 @@ char USER[] = "virtu";
 char PASSWORD[] = "virtu";
 const char resource[] = "/prd/api/products";
 const char server[] = "d1c23ojg0wdyum.cloudfront.net";
+uint16_t distance = 12;
+char content[80];
+
 
 
 
@@ -83,6 +86,8 @@ void SIMTransmit(char *cmd)
   HAL_UART_Receive (&huart1, buffer, 100, 1000);
   printf("Response: %s\n", buffer);
 }
+
+
 
 // Extract IMEI from buffer and save it to the IMEI variable
 void extractIMEI(void)
@@ -170,6 +175,8 @@ void httpPost(void)
        SIMTransmit("AT+CFUN=1\r\n"); // Sets functionalities to full.
        sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\",\"0.0.0.0\",0,0,0,0\r\n",APN);
        SIMTransmit(ATcommand); // Define a Packet Data Protocol (PDP) context with  AccesSIMTransmit("AT+CGREG?\r\n"); // Query the Network Registration status for GPRS.
+       sprintf(ATcommand,"AT+CGDCONT=13,\"IP\",\"%s\",\"0.0.0.0\",0,0,0,0\r\n",APN);
+       SIMTransmit(ATcommand);
        extractIMEI();          // Extract IMEI number
 
 
@@ -197,6 +204,7 @@ void httpPost(void)
 
     while(!NETOPENisOK )
     {
+	    SIMTransmit("AT+CSQ\r\n");
     	SIMTransmit("AT+CIPSHUT\r\n"); // Close connections
     	SIMTransmit("AT+CGATT=0\r\n"); // Detach from the GPRS (General Packet Radio Service) network
     	sprintf(ATcommand,"AT+SAPBR=3,1,\"Contype\",\"GPRS\"\r\n");
@@ -216,8 +224,8 @@ void httpPost(void)
     	SIMTransmit("AT+CIPMUX=1\r\n"); // Configure the "Multiple IP Connection Mode", allows multiple simultaneous connections
     	SIMTransmit("AT+CIPQSEND=1\r\n"); // Controls the mode for sending data over an IP connection to 'Quick Send Mode'.
     	SIMTransmit("AT+CIPRXGET=1\r\n"); // Instructing the module to check how much data has been received from the network but has not yet been read or processed from the buffer
-    	sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\"\r\n",APN);
-    	SIMTransmit(ATcommand); // Set APN again
+    	//sprintf(ATcommand,"AT+CGDCONT=1,\"IP\",\"%s\"\r\n",APN);
+    	//SIMTransmit(ATcommand); // Set APN again
     	SIMTransmit("AT+CSTT=\"virtueyes.com.br\",\"virtu\",\"virtu\"\r\n");
     	SIMTransmit("AT+CIICR\r\n");  // Bring Up Wireless Connection with GPRS
     	SIMTransmit("AT+CIFSR\r\n");  // Get Local IP Address
@@ -238,61 +246,164 @@ void httpPost(void)
 
       while(!REQUESTSENT )
 		  {
-			  const char *json_data = "{\"test\": \"data sent\"}";
-    	  int json_length = strlen(json_data);
 
+    	  sprintf(content,"key=a@4K3&distance=%d",distance);
+
+		  SIMTransmit("AT+CSQ\r\n");
     	  SIMTransmit("AT+CIPCLOSE=0\r\n");  // Get Local IP Address
     	  SIMTransmit("AT+CIPSTART=0,\"TCP\",\"d1c23ojg0wdyum.cloudfront.net\",80\r\n");
 
+
     	  // Perform http request
-    	  sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(resource)+16);
-          SIMTransmit(ATcommand);
-              if(strstr((char *)buffer,">"))
+    	      sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(resource)+16);
+    	      SIMTransmit(ATcommand);
+    	      if(strstr((char *)buffer,">"))
     	      {
     	        sprintf(ATcommand,"POST %s HTTP/1.1\r\n",resource);
     	        SIMTransmit(ATcommand);
     	      }
 
+    	      sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(server)+8);
+    	      SIMTransmit(ATcommand);
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        sprintf(ATcommand,"Host: %s\r\n",server);
+    	        SIMTransmit(ATcommand);
+    	      }
 
-           sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(server)+8);
-           SIMTransmit(ATcommand);
-               if(strstr((char *)buffer,">"))
-               {
-                 sprintf(ATcommand,"Host: %s\r\n",server);
-                 SIMTransmit(ATcommand);
-               }
+    	      SIMTransmit("AT+CIPSEND=0,19\r\n");
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit("Connection: close\r\n");
+    	      }
 
-            SIMTransmit("AT+CIPSEND=0,32\r\n");
-                if(strstr((char *)buffer,">"))
-                {
-                 SIMTransmit("Content-Type: application/json\r\n");
-                }
+    	      SIMTransmit("AT+CIPSEND=0,49\r\n");
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit("Content-Type: application/x-www-form-urlencoded\r\n");
+    	      }
 
-            SIMTransmit("AT+CIPSEND=0,20\r\n");
-                if(strstr((char *)buffer,">"))
-                {
-                 SIMTransmit("Content-Length: 21");
-                }
+    	      SIMTransmit("AT+CIPSEND=0,16\r\n");
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit("Content-Length: ");
+    	      }
 
-             SIMTransmit("AT+CIPSEND=0,21\r\n");
-                if(strstr((char *)buffer,">"))
-                {
-                 SIMTransmit("Connection: close\r\n");
-                }
+    	      char sLength[5];
+    	      snprintf(sLength, 5,"%d",strlen(content));
+    	      sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(sLength));
+    	      SIMTransmit(ATcommand);
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit(sLength);
+    	      }
 
-                SIMTransmit("AT+CIPSEND=0,20\r\n");
-                if (strstr((char *)buffer, ">")) {
-                    // Send the actual data
-                    SIMTransmit("{\"test\": \"DATA sent\"}\r\n");
-                }
+    	      SIMTransmit("AT+CIPSEND=0,2\r\n");
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit("\r\n");
+    	      }
 
-                SIMTransmit("AT+CIPSEND=0,2\r\n");
-                    if(strstr((char *)buffer,">"))
-                    {
-                      SIMTransmit("\r\n");
-                    }
+    	      SIMTransmit("AT+CIPSEND=0,2\r\n");
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit("\r\n");
+    	      }
 
-                    SIMTransmit("AT+CIPCLOSE=0\r\n");
+    	      sprintf(ATcommand,"AT+CIPSEND=0,%d\r\n",strlen(content));
+    	      SIMTransmit(ATcommand);
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit(content);
+    	      }
+
+    	      SIMTransmit("AT+CIPSEND=0,2\r\n");
+    	      if(strstr((char *)buffer,">"))
+    	      {
+    	        SIMTransmit("\r\n");
+    	      }
+    	      HAL_Delay(2000);
+    	      // Close connections
+    	      SIMTransmit("AT+CIPCLOSE=0\r\n");
+    	      SIMTransmit("AT++NETCLOSE\r\n");
+
+
+
+                               int dataLength = 0;
+                                           char *ptr;
+                                           char x_value_str[10];
+
+                                           // Loop until data is available
+                                           do {
+                                               SIMTransmit("AT+CIPRXGET=4,0\r\n");
+                                               HAL_Delay(1000); // Wait for the response
+
+                                               // Check if the response contains "+CIPRXGET: 4,0,<x>"
+                                               if ((ptr = strstr((char *)buffer, "+CIPRXGET: 4,0,")) != NULL) {
+                                                   ptr += strlen("+CIPRXGET: 4,0,"); // Move pointer to the start of <x>
+
+                                                   // Extract the value of <x>
+                                                   int i = 0;
+                                                   while (*ptr >= '0' && *ptr <= '9' && i < sizeof(x_value_str) - 1) {
+                                                       x_value_str[i++] = *ptr++;
+                                                   }
+                                                   x_value_str[i] = '\0';
+
+                                                   dataLength = atoi(x_value_str);
+
+                                                   if (dataLength > 1) {
+                                                       break; // Data is available
+                                                   }
+                                               }
+
+                                               printf("No data available yet. Waiting...\n");
+                                               HAL_Delay(2000); // Wait before next attempt
+                                           } while (1);
+
+                                           // Now dataLength holds the number of bytes to read
+                                           // Prepare command to read the data
+                                           sprintf(ATcommand, "AT+CIPRXGET=2,0,%d\r\n", dataLength);
+                                           SIMTransmit(ATcommand);
+
+                                           // Parse and print the received data
+                                           if ((ptr = strstr((char *)buffer, "+CIPRXGET: 2,0,")) != NULL) {
+                                               ptr += strlen("+CIPRXGET: 2,0,");
+
+                                               // Skip over <read_length> and <left_length>
+                                               while (*ptr != '\r' && *ptr != '\n' && *ptr != '\0') ptr++;
+                                               if (*ptr == '\r') ptr++;
+                                               if (*ptr == '\n') ptr++;
+
+                                               // Now ptr points to the start of the data
+                                               char receivedData[1024];
+                                               int dataToCopy = dataLength;
+                                               if (dataToCopy > sizeof(receivedData) - 1) {
+                                                   dataToCopy = sizeof(receivedData) - 1;
+                                               }
+
+                                               strncpy(receivedData, ptr, dataToCopy);
+                                               receivedData[dataToCopy] = '\0';
+
+                                               printf("Received Data: %s\n", receivedData);
+                                           } else {
+                                               printf("Failed to parse received data.\n");
+                                           }
+
+                                           // [Added code ends here]
+
+                                           SIMTransmit("AT+CIPCLOSE=0\r\n");
+
+                                           if(strstr((char *)buffer,"OK"))
+                                           {
+                                               REQUESTSENT = true;
+                                               printf("Post request was sent\n");
+                                           }
+
+
+
+                                   SIMTransmit("AT+CIPCLOSE=0\r\n");
+
+
 
 
         if(strstr((char *)buffer,"+CGATT: 1"))
