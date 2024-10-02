@@ -71,7 +71,7 @@ const char APN[]  = "virtueyes.com.br";
 char USER[] = "virtu";
 char PASSWORD[] = "virtu";
 const char resource[] = "/prd/api/products";
-const char server[] = "d1c23ojg0wdyum.cloudfront.net";
+const char server[] = "";
 uint16_t distance = 12;
 char content[80];
 
