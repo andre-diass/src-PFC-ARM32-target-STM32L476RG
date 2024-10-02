@@ -63,6 +63,20 @@ static void MX_USART1_UART_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+uint8_t buffer[100] = {0};
+char IMEI[30];
+char ATcommand[80];
+char coordinates[200];
+const char APN[]  = "virtueyes.com.br";
+char USER[] = "virtu";
+char PASSWORD[] = "virtu";
+const char resource[] = "/prd/api/products";
+const char server[] = "";
+uint16_t distance = 12;
+char content[80];
+
+
+
 
 
 void SIMTransmit(char *cmd)
@@ -315,7 +329,79 @@ void httpPost(void)
 
 
 
-                              
+                               int dataLength = 0;
+                                           char *ptr;
+                                           char x_value_str[10];
+
+                                           // Loop until data is available
+                                           do {
+                                               SIMTransmit("AT+CIPRXGET=4,0\r\n");
+                                               HAL_Delay(1000); // Wait for the response
+
+                                               // Check if the response contains "+CIPRXGET: 4,0,<x>"
+                                               if ((ptr = strstr((char *)buffer, "+CIPRXGET: 4,0,")) != NULL) {
+                                                   ptr += strlen("+CIPRXGET: 4,0,"); // Move pointer to the start of <x>
+
+                                                   // Extract the value of <x>
+                                                   int i = 0;
+                                                   while (*ptr >= '0' && *ptr <= '9' && i < sizeof(x_value_str) - 1) {
+                                                       x_value_str[i++] = *ptr++;
+                                                   }
+                                                   x_value_str[i] = '\0';
+
+                                                   dataLength = atoi(x_value_str);
+
+                                                   if (dataLength > 1) {
+                                                       break; // Data is available
+                                                   }
+                                               }
+
+                                               printf("No data available yet. Waiting...\n");
+                                               HAL_Delay(2000); // Wait before next attempt
+                                           } while (1);
+
+                                           // Now dataLength holds the number of bytes to read
+                                           // Prepare command to read the data
+                                           sprintf(ATcommand, "AT+CIPRXGET=2,0,%d\r\n", dataLength);
+                                           SIMTransmit(ATcommand);
+
+                                           // Parse and print the received data
+                                           if ((ptr = strstr((char *)buffer, "+CIPRXGET: 2,0,")) != NULL) {
+                                               ptr += strlen("+CIPRXGET: 2,0,");
+
+                                               // Skip over <read_length> and <left_length>
+                                               while (*ptr != '\r' && *ptr != '\n' && *ptr != '\0') ptr++;
+                                               if (*ptr == '\r') ptr++;
+                                               if (*ptr == '\n') ptr++;
+
+                                               // Now ptr points to the start of the data
+                                               char receivedData[1024];
+                                               int dataToCopy = dataLength;
+                                               if (dataToCopy > sizeof(receivedData) - 1) {
+                                                   dataToCopy = sizeof(receivedData) - 1;
+                                               }
+
+                                               strncpy(receivedData, ptr, dataToCopy);
+                                               receivedData[dataToCopy] = '\0';
+
+                                               printf("Received Data: %s\n", receivedData);
+                                           } else {
+                                               printf("Failed to parse received data.\n");
+                                           }
+
+                                           // [Added code ends here]
+
+                                           SIMTransmit("AT+CIPCLOSE=0\r\n");
+
+                                           if(strstr((char *)buffer,"OK"))
+                                           {
+                                               REQUESTSENT = true;
+                                               printf("Post request was sent\n");
+                                           }
+
+
+
+                                   SIMTransmit("AT+CIPCLOSE=0\r\n");
 
 
 
