@@ -22,7 +22,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -54,7 +53,7 @@ UART_HandleTypeDef huart2;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
+//static void MX_USART2_UART_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
@@ -70,9 +69,8 @@ char coordinates[200];
 const char APN[]  = "virtueyes.com.br";
 char USER[] = "virtu";
 char PASSWORD[] = "virtu";
-const char resource[] = "/prd/api/products";
-const char server[] = "";
-uint16_t distance = 12;
+
+
 char content[80];
 
 
@@ -116,12 +114,13 @@ void getGPSCoordinates(void)
 
     // Clear the coordinates buffer
     memset(coordinates, 0, sizeof(coordinates));
+    SIMTransmit("AT+SGPIO=0,4,1,1\r\n");
     SIMTransmit("AT+CGNSPWR=1\r\n");
 
     while (!gpsDataReceived)
     {
         // Transmit the GPS command
-        SIMTransmit(gpsCommand);
+        SIMTransmit("AT+CGNSINF\r\n");
 
         // Check if the response contains valid GPS data
         if (strstr((char *)buffer, "+CGNSINF: 1,1,"))
@@ -163,7 +162,7 @@ void httpPost(void)
   // Check for network registration.
   if(ATisOK)
   {
-
+	   getGPSCoordinates();
        SIMTransmit("AT+CMEE=0\r\n"); //Enables the use of result code.
        SIMTransmit("AT+CLTS=1\r\n"); //Enable the local time stamp. The module will update its internal clock to the network-provided time, if available
        SIMTransmit("AT+CBATCHK=1\r\n"); //Enable the battery voltage checking feature.
@@ -230,7 +229,6 @@ void httpPost(void)
     	SIMTransmit("AT+CIICR\r\n");  // Bring Up Wireless Connection with GPRS
     	SIMTransmit("AT+CIFSR\r\n");  // Get Local IP Address
     	SIMTransmit("AT+CGATT?\r\n"); // Query GPRS status and expect it to be '+CGATT: 1'
-    	//getGPSCoordinates();
 
 
       if(strstr((char *)buffer,"+CGATT: 1"))
@@ -247,7 +245,7 @@ void httpPost(void)
       while(!REQUESTSENT )
 		  {
 
-    	  sprintf(content,"key=a@4K3&distance=%d",distance);
+    	  sprintf(content,"%s",coordinates);
 
 		  SIMTransmit("AT+CSQ\r\n");
     	  SIMTransmit("AT+CIPCLOSE=0\r\n");  // Get Local IP Address
@@ -327,81 +325,7 @@ void httpPost(void)
     	      SIMTransmit("AT+CIPCLOSE=0\r\n");
     	      SIMTransmit("AT++NETCLOSE\r\n");
 
-
-
-                               int dataLength = 0;
-                                           char *ptr;
-                                           char x_value_str[10];
-
-                                           // Loop until data is available
-                                           do {
-                                               SIMTransmit("AT+CIPRXGET=4,0\r\n");
-                                               HAL_Delay(1000); // Wait for the response
-
-                                               // Check if the response contains "+CIPRXGET: 4,0,<x>"
-                                               if ((ptr = strstr((char *)buffer, "+CIPRXGET: 4,0,")) != NULL) {
-                                                   ptr += strlen("+CIPRXGET: 4,0,"); // Move pointer to the start of <x>
-
-                                                   // Extract the value of <x>
-                                                   int i = 0;
-                                                   while (*ptr >= '0' && *ptr <= '9' && i < sizeof(x_value_str) - 1) {
-                                                       x_value_str[i++] = *ptr++;
-                                                   }
-                                                   x_value_str[i] = '\0';
-
-                                                   dataLength = atoi(x_value_str);
-
-                                                   if (dataLength > 1) {
-                                                       break; // Data is available
-                                                   }
-                                               }
-
-                                               printf("No data available yet. Waiting...\n");
-                                               HAL_Delay(2000); // Wait before next attempt
-                                           } while (1);
-
-                                           // Now dataLength holds the number of bytes to read
-                                           // Prepare command to read the data
-                                           sprintf(ATcommand, "AT+CIPRXGET=2,0,%d\r\n", dataLength);
-                                           SIMTransmit(ATcommand);
-
-                                           // Parse and print the received data
-                                           if ((ptr = strstr((char *)buffer, "+CIPRXGET: 2,0,")) != NULL) {
-                                               ptr += strlen("+CIPRXGET: 2,0,");
-
-                                               // Skip over <read_length> and <left_length>
-                                               while (*ptr != '\r' && *ptr != '\n' && *ptr != '\0') ptr++;
-                                               if (*ptr == '\r') ptr++;
-                                               if (*ptr == '\n') ptr++;
-
-                                               // Now ptr points to the start of the data
-                                               char receivedData[1024];
-                                               int dataToCopy = dataLength;
-                                               if (dataToCopy > sizeof(receivedData) - 1) {
-                                                   dataToCopy = sizeof(receivedData) - 1;
-                                               }
-
-                                               strncpy(receivedData, ptr, dataToCopy);
-                                               receivedData[dataToCopy] = '\0';
-
-                                               printf("Received Data: %s\n", receivedData);
-                                           } else {
-                                               printf("Failed to parse received data.\n");
-                                           }
-
-                                           // [Added code ends here]
-
-                                           SIMTransmit("AT+CIPCLOSE=0\r\n");
-
-                                           if(strstr((char *)buffer,"OK"))
-                                           {
-                                               REQUESTSENT = true;
-                                               printf("Post request was sent\n");
-                                           }
-
-
-
-                                   SIMTransmit("AT+CIPCLOSE=0\r\n");
+              SIMTransmit("AT+CIPCLOSE=0\r\n");
 
 
 
@@ -447,7 +371,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART2_UART_Init();
+//  MX_USART2_UART_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
@@ -459,6 +383,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
 	  httpPost();
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -553,35 +478,35 @@ static void MX_USART1_UART_Init(void)
   * @param None
   * @retval None
   */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
-
-}
+//static void MX_USART2_UART_Init(void)
+//{
+//
+//  /* USER CODE BEGIN USART2_Init 0 */
+//
+//  /* USER CODE END USART2_Init 0 */
+//
+//  /* USER CODE BEGIN USART2_Init 1 */
+//
+//  /* USER CODE END USART2_Init 1 */
+//  huart2.Instance = USART2;
+//  huart2.Init.BaudRate = 115200;
+//  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+//  huart2.Init.StopBits = UART_STOPBITS_1;
+//  huart2.Init.Parity = UART_PARITY_NONE;
+//  huart2.Init.Mode = UART_MODE_TX_RX;
+//  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+//  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+//  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+//  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+//  if (HAL_UART_Init(&huart2) != HAL_OK)
+//  {
+//    Error_Handler();
+//  }
+//  /* USER CODE BEGIN USART2_Init 2 */
+//
+//  /* USER CODE END USART2_Init 2 */
+//
+//}
 
 /**
   * @brief GPIO Initialization Function
