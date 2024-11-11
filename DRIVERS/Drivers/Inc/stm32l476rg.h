@@ -216,10 +216,10 @@ GPIO_RegDef_t *pGPIOA = GPIOA;
 
 #define ENABLE 				      1
 #define DISABLE 			      0
-#define SET 				        ENABLE
+#define SET 				      ENABLE
 #define RESET 				      DISABLE
-#define GPIO_PIN_SET        SET
-#define GPIO_PIN_RESET      RESET
+#define GPIO_PIN_SET              SET
+#define GPIO_PIN_RESET            RESET
 
 
 /******************************************************************************************
@@ -282,7 +282,7 @@ GPIO_RegDef_t *pGPIOA = GPIOA;
 #define USART_CR1_CMIE                USART_CR1_CMIE_Msk                       /*!< Character match interrupt enable */
 #define USART_CR1_OVER8_Pos           (15U)
 #define USART_CR1_OVER8_Msk           (0x1UL << USART_CR1_OVER8_Pos)           /*!< 0x00008000 */
-#define USART_CR1_OVER8               USART_CR1_OVER8_Msk                      /*!< Oversampling by 8-bit or 16-bit mode */
+#define USART_CR1_OVER8               15                      /*!< Oversampling by 8-bit or 16-bit mode */
 #define USART_CR1_DEDT_Pos            (16U)
 #define USART_CR1_DEDT_Msk            (0x1FUL << USART_CR1_DEDT_Pos)           /*!< 0x001F0000 */
 #define USART_CR1_DEDT                USART_CR1_DEDT_Msk                       /*!< DEDT[4:0] bits (Driver Enable Deassertion Time) */
